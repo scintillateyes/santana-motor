@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{title}} - Sistem Penjualan Kendaraan</title>
+    {{> head}}
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+      }
+      .table th, .table td {
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">Sistem Penjualan Kendaraan</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="/">Home</a></li>
+          <li><a href="/profile">Profile</a></li>
+          <li><a href="/admin">Admin Dashboard</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>{{title}}</h1>
+      
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Daftar Kendaraan</h3>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <button class="btn btn-primary" onclick="showAddVehicleForm()">Tambah Kendaraan</button>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="table table-striped table-hover" id="vehiclesTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nama</th>
+                  <th>Merek</th>
+                  <th>Model</th>
+                  <th>Tahun</th>
+                  <th>Harga Jual</th>
+                  <th>Stok</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Data will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for adding/editing vehicles -->
+    <div class="modal fade" id="vehicleModal" tabindex="-1" role="dialog" aria-labelledby="vehicleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title" id="vehicleModalLabel">Tambah Kendaraan Baru</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="vehicleForm">
+              <input type="hidden" id="vehicleId">
+              <div class="form-group">
+                <label for="name" class="control-label">Nama</label>
+                <input type="text" class="form-control" id="name" required>
+              </div>
+              <div class="form-group">
+                <label for="brand" class="control-label">Merek</label>
+                <input type="text" class="form-control" id="brand" required>
+              </div>
+              <div class="form-group">
+                <label for="model" class="control-label">Model</label>
+                <input type="text" class="form-control" id="model" required>
+              </div>
+              <div class="form-group">
+                <label for="year" class="control-label">Tahun</label>
+                <input type="number" class="form-control" id="year" required>
+              </div>
+              <div class="form-group">
+                <label for="color" class="control-label">Warna</label>
+                <input type="text" class="form-control" id="color">
+              </div>
+              <div class="form-group">
+                <label for="transmission" class="control-label">Transmisi</label>
+                <select class="form-control" id="transmission">
+                  <option value="manual">Manual</option>
+                  <option value="automatic">Otomatis</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="mileage" class="control-label">Jarak Tempuh (km)</label>
+                <input type="number" class="form-control" id="mileage">
+              </div>
+              <div class="form-group">
+                <label for="condition" class="control-label">Kondisi</label>
+                <select class="form-control" id="condition">
+                  <option value="baik">Baik</option>
+                  <option value="rusak">Rusak</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="purchase_price" class="control-label">Harga Beli</label>
+                <input type="number" class="form-control" id="purchase_price" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label for="selling_price" class="control-label">Harga Jual</label>
+                <input type="number" class="form-control" id="selling_price" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label for="stock" class="control-label">Stok</label>
+                <input type="number" class="form-control" id="stock" value="1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="description" class="control-label">Deskripsi</label>
+                <textarea class="form-control" id="description" rows="3"></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+            <button type="button" class="btn btn-primary" onclick="saveVehicle()">Simpan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load vehicles data
+      loadVehicles();
+    });
+
+    function loadVehicles() {
+      fetch('/api/admin/vehicles')
+        .then(response => response.json())
+        .then(data => {
+          const tbody = document.querySelector('#vehiclesTable tbody');
+          tbody.innerHTML = '';
+          
+          data.forEach(vehicle => {
+            const status = vehicle.stock > 0 ? 'Tersedia' : 'Habis';
+            const statusClass = vehicle.stock > 0 ? 'text-success' : 'text-danger';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${vehicle.id}</td>
+              <td>${vehicle.name}</td>
+              <td>${vehicle.brand}</td>
+              <td>${vehicle.model}</td>
+              <td>${vehicle.year}</td>
+              <td>Rp ${parseFloat(vehicle.selling_price).toLocaleString()}</td>
+              <td>${vehicle.stock}</td>
+              <td><span class="${statusClass}">${status}</span></td>
+              <td>
+                <button class="btn btn-xs btn-primary" onclick="editVehicle(${vehicle.id})">Edit</button>
+                <button class="btn btn-xs btn-danger" onclick="deleteVehicle(${vehicle.id})">Hapus</button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error('Error loading vehicles:', error);
+          alert('Gagal memuat data kendaraan');
+        });
+    }
+
+    function showAddVehicleForm() {
+      document.getElementById('vehicleForm').reset();
+      document.getElementById('vehicleId').value = '';
+      document.getElementById('vehicleModalLabel').textContent = 'Tambah Kendaraan Baru';
+      $('#vehicleModal').modal('show');
+    }
+
+    function editVehicle(id) {
+      fetch('/api/admin/vehicles/' + id)
+        .then(response => response.json())
+        .then(vehicle => {
+          document.getElementById('vehicleId').value = vehicle.id;
+          document.getElementById('name').value = vehicle.name;
+          document.getElementById('brand').value = vehicle.brand;
+          document.getElementById('model').value = vehicle.model;
+          document.getElementById('year').value = vehicle.year;
+          document.getElementById('color').value = vehicle.color || '';
+          document.getElementById('transmission').value = vehicle.transmission || 'manual';
+          document.getElementById('mileage').value = vehicle.mileage || '';
+          document.getElementById('condition').value = vehicle.condition || 'baik';
+          document.getElementById('purchase_price').value = vehicle.purchase_price;
+          document.getElementById('selling_price').value = vehicle.selling_price;
+          document.getElementById('stock').value = vehicle.stock;
+          document.getElementById('description').value = vehicle.description || '';
+          
+          document.getElementById('vehicleModalLabel').textContent = 'Edit Kendaraan';
+          $('#vehicleModal').modal('show');
+        })
+        .catch(error => {
+          console.error('Error fetching vehicle:', error);
+          alert('Gagal mengambil data kendaraan');
+        });
+    }
+
+    function saveVehicle() {
+      const id = document.getElementById('vehicleId').value;
+      const formData = {
+        name: document.getElementById('name').value,
+        brand: document.getElementById('brand').value,
+        model: document.getElementById('model').value,
+        year: document.getElementById('year').value,
+        color: document.getElementById('color').value,
+        transmission: document.getElementById('transmission').value,
+        mileage: document.getElementById('mileage').value,
+        condition: document.getElementById('condition').value,
+        purchase_price: document.getElementById('purchase_price').value,
+        selling_price: document.getElementById('selling_price').value,
+        stock: document.getElementById('stock').value,
+        description: document.getElementById('description').value
+      };
+
+      const url = id ? `/api/admin/vehicles/${id}` : '/api/admin/vehicles';
+      const method = id ? 'PUT' : 'POST';
+
+      fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.message) {
+          alert(data.message);
+          $('#vehicleModal').modal('hide');
+          loadVehicles(); // Reload the table
+        } else {
+          alert('Gagal menyimpan kendaraan');
+        }
+      })
+      .catch(error => {
+        console.error('Error saving vehicle:', error);
+        alert('Gagal menyimpan kendaraan');
+      });
+    }
+
+    function deleteVehicle(id) {
+      if (confirm('Apakah Anda yakin ingin menghapus kendaraan ini?')) {
+        fetch('/api/admin/vehicles/' + id, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.message) {
+            alert(data.message);
+            loadVehicles(); // Reload the table
+          } else {
+            alert('Gagal menghapus kendaraan');
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting vehicle:', error);
+          alert('Gagal menghapus kendaraan');
+        });
+      }
+    }
+    </script>
+  </body>
+</html>

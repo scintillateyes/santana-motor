@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>User Profile</title>
+    {{> head}}
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-header text-center">
+        <h1>User Profile</h1>
+        <a href="/logout" class="btn btn-info">Logout</a>
+      </div>
+
+      <div class="well">
+        <p><strong>User ID</strong>: {{ user.id }}</p>
+        <p><strong>Name</strong>: {{ user.name }}</p>
+        <p><strong>Email</strong>: {{ user.email }}</p>
+        <p><strong>Phone</strong>: {{ user.phone }}</p>
+        <p><strong>Address</strong>: {{ user.address }}</p>
+        <p><strong>Role</strong>: {{ user.role }}</p>
+        <p><strong>Member since</strong>: {{ user.created_at }}</p>
+      </div>
+
+      {{#ifCond user.role '==' 'admin'}}
+        <p><a href="/admin" class="btn btn-primary">Admin Dashboard</a></p>
+      {{/ifCond}}
+    </div>
+  </body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{title}} - Sistem Penjualan Kendaraan</title>
+    {{> head}}
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+      }
+      .table th, .table td {
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">Sistem Penjualan Kendaraan</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="/">Home</a></li>
+          <li><a href="/profile">Profile</a></li>
+          <li><a href="/admin">Admin Dashboard</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>{{title}}</h1>
+      
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Daftar Transaksi</h3>
+        </div>
+        <div class="panel-body">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover" id="transactionsTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>ID Pelanggan</th>
+                  <th>Nama Pelanggan</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Tanggal</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Data will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for updating transaction status -->
+    <div class="modal fade" id="statusModal" tabindex="-1" role="dialog" aria-labelledby="statusModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title" id="statusModalLabel">Update Status Transaksi</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="statusForm">
+              <input type="hidden" id="transactionId">
+              <div class="form-group">
+                <label for="status" class="control-label">Status</label>
+                <select class="form-control" id="status" required>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+            <button type="button" class="btn btn-primary" onclick="updateStatus()">Simpan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load transactions data
+      loadTransactions();
+    });
+
+    function loadTransactions() {
+      fetch('/api/admin/transactions')
+        .then(response => response.json())
+        .then(data => {
+          const tbody = document.querySelector('#transactionsTable tbody');
+          tbody.innerHTML = '';
+          
+          data.forEach(transaction => {
+            const statusClass = getStatusClass(transaction.status);
+            const customerName = transaction.customer_name || 'N/A';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${transaction.id}</td>
+              <td>${transaction.customer_id}</td>
+              <td>${customerName}</td>
+              <td>Rp ${parseFloat(transaction.total_amount).toLocaleString()}</td>
+              <td><span class="${statusClass}">${transaction.status}</span></td>
+              <td>${new Date(transaction.created_at).toLocaleDateString()}</td>
+              <td>
+                <button class="btn btn-xs btn-primary" onclick="showStatusUpdate(${transaction.id}, '${transaction.status}')">Update Status</button>
+                <button class="btn btn-xs btn-danger" onclick="deleteTransaction(${transaction.id})">Hapus</button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error('Error loading transactions:', error);
+          alert('Gagal memuat data transaksi');
+        });
+    }
+
+    function getStatusClass(status) {
+      switch(status) {
+        case 'completed':
+          return 'text-success';
+        case 'cancelled':
+          return 'text-danger';
+        case 'confirmed':
+          return 'text-info';
+        default:
+          return 'text-warning';
+      }
+    }
+
+    function showStatusUpdate(id, currentStatus) {
+      document.getElementById('transactionId').value = id;
+      document.getElementById('status').value = currentStatus;
+      
+      $('#statusModal').modal('show');
+    }
+
+    function updateStatus() {
+      const id = document.getElementById('transactionId').value;
+      const status = document.getElementById('status').value;
+
+      fetch(`/api/admin/transactions/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: status })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.message) {
+          alert(data.message);
+          $('#statusModal').modal('hide');
+          loadTransactions(); // Reload the table
+        } else {
+          alert('Gagal mengupdate status transaksi');
+        }
+      })
+      .catch(error => {
+        console.error('Error updating transaction status:', error);
+        alert('Gagal mengupdate status transaksi');
+      });
+    }
+
+    function deleteTransaction(id) {
+      if (confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
+        fetch('/api/admin/transactions/' + id, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.message) {
+            alert(data.message);
+            loadTransactions(); // Reload the table
+          } else {
+            alert('Gagal menghapus transaksi');
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting transaction:', error);
+          alert('Gagal menghapus transaksi');
+        });
+      }
+    }
+    </script>
+  </body>
+</html>

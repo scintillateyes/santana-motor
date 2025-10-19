@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{title}} - Sistem Penjualan Kendaraan</title>
+    {{> head}}
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+      }
+      .table th, .table td {
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">Sistem Penjualan Kendaraan</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="/">Home</a></li>
+          <li><a href="/profile">Profile</a></li>
+          <li><a href="/admin">Admin Dashboard</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>{{title}}</h1>
+      
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Daftar Pelanggan</h3>
+        </div>
+        <div class="panel-body">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover" id="customersTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Email</th>
+                  <th>Nama</th>
+                  <th>Telepon</th>
+                  <th>Alamat</th>
+                  <th>Peran</th>
+                  <th>Tanggal Dibuat</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Data will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load customers data
+      loadCustomers();
+    });
+
+    function loadCustomers() {
+      fetch('/api/admin/customers')
+        .then(response => response.json())
+        .then(data => {
+          const tbody = document.querySelector('#customersTable tbody');
+          tbody.innerHTML = '';
+          
+          data.forEach(customer => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${customer.id}</td>
+              <td>${customer.email}</td>
+              <td>${customer.name}</td>
+              <td>${customer.phone || '-'}</td>
+              <td>${customer.address || '-'}</td>
+              <td>${customer.role}</td>
+              <td>${new Date(customer.created_at).toLocaleDateString()}</td>
+              <td>
+                <button class="btn btn-xs btn-primary" onclick="editCustomer(${customer.id})">Edit</button>
+                <button class="btn btn-xs btn-danger" onclick="deleteCustomer(${customer.id})">Hapus</button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error('Error loading customers:', error);
+          alert('Gagal memuat data pelanggan');
+        });
+    }
+
+    function editCustomer(id) {
+      // Implement edit functionality
+      alert('Edit customer with ID: ' + id);
+    }
+
+    function deleteCustomer(id) {
+      if (confirm('Apakah Anda yakin ingin menghapus pelanggan ini?')) {
+        fetch('/api/admin/customers/' + id, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.message) {
+            alert(data.message);
+            loadCustomers(); // Reload the table
+          } else {
+            alert('Gagal menghapus pelanggan');
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting customer:', error);
+          alert('Gagal menghapus pelanggan');
+        });
+      }
+    }
+    </script>
+  </body>
+</html>

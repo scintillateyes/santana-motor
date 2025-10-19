@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Laporan Penjualan - Admin</title>
+    {{> head}}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .report-filters {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      
+      .report-section {
+        margin-bottom: 30px;
+      }
+      
+      .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+      
+      .summary-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      
+      .summary-card .value {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #007bff;
+      }
+      
+      .summary-card .label {
+        color: #6c757d;
+        font-size: 0.9em;
+      }
+      
+      .chart-container {
+        position: relative;
+        height: 400px;
+        margin: 30px 0;
+      }
+      
+      .transactions-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      
+      .transactions-table th, .transactions-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+      }
+      
+      .transactions-table th {
+        background-color: #f8f9fa;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/admin">Admin Dashboard</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="/admin">Dashboard</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Laporan Penjualan</h1>
+      
+      <div class="report-filters">
+        <h3>Filter Laporan</h3>
+        <form id="reportFilterForm">
+          <div class="row">
+            <div class="col-md-3">
+              <label for="startDate">Tanggal Awal:</label>
+              <input type="date" id="startDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label for="endDate">Tanggal Akhir:</label>
+              <input type="date" id="endDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label for="statusFilter">Status:</label>
+              <select id="statusFilter" class="form-control">
+                <option value="">Semua Status</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label>&nbsp;</label>
+              <button type="submit" class="form-control btn btn-primary">Terapkan Filter</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      
+      <div class="report-section">
+        <h2>Ringkasan Penjualan</h2>
+        <div class="summary-cards" id="summaryCards">
+          <!-- Summary cards will be populated by JavaScript -->
+        </div>
+      </div>
+      
+      <div class="report-section">
+        <h2>Grafik Penjualan</h2>
+        <div class="chart-container">
+          <canvas id="salesChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="report-section">
+        <h2>Detail Transaksi</h2>
+        <div id="transactionsList">
+          <!-- Transactions will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      // Ambil data awal saat halaman dimuat
+      document.addEventListener('DOMContentLoaded', function() {
+        fetchReportData();
+        fetchChartData();
+        fetchTransactions();
+      });
+      
+      // Event listener untuk form filter
+      document.getElementById('reportFilterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        fetchReportData();
+        fetchChartData();
+        fetchTransactions();
+      });
+      
+      // Fungsi untuk mengambil data ringkasan
+      function fetchReportData() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        let url = '/api/admin/reports/sales/summary';
+        const params = [];
+        
+        if (startDate) params.push(`startDate=${encodeURIComponent(startDate)}`);
+        if (endDate) params.push(`endDate=${encodeURIComponent(endDate)}`);
+        
+        if (params.length > 0) {
+          url += '?' + params.join('&');
+        }
+        
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            displaySummaryData(data);
+          })
+          .catch(error => {
+            console.error('Error fetching summary data:', error);
+            document.getElementById('summaryCards').innerHTML = '<p>Terjadi kesalahan saat mengambil data ringkasan.</p>';
+          });
+      }
+      
+      // Fungsi untuk menampilkan data ringkasan
+      function displaySummaryData(data) {
+        const container = document.getElementById('summaryCards');
+        
+        container.innerHTML = `
+          <div class="summary-card">
+            <div class="value">${data.total_transactions || 0}</div>
+            <div class="label">Total Transaksi</div>
+          </div>
+          <div class="summary-card">
+            <div class="value">${data.completed_transactions || 0}</div>
+            <div class="label">Transaksi Selesai</div>
+          </div>
+          <div class="summary-card">
+            <div class="value">Rp ${(data.total_revenue || 0).toLocaleString('id-ID')}</div>
+            <div class="label">Total Pendapatan</div>
+          </div>
+          <div class="summary-card">
+            <div class="value">Rp ${(data.average_transaction_value || 0).toLocaleString('id-ID')}</div>
+            <div class="label">Rata-rata Transaksi</div>
+          </div>
+        `;
+      }
+      
+      // Fungsi untuk mengambil data grafik
+      function fetchChartData() {
+        fetch('/api/admin/reports/sales/chart')
+          .then(response => response.json())
+          .then(data => {
+            renderChart(data);
+          })
+          .catch(error => {
+            console.error('Error fetching chart data:', error);
+          });
+      }
+      
+      // Fungsi untuk merender grafik
+      function renderChart(data) {
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        
+        // Hapus chart sebelumnya jika ada
+        if (window.salesChart) {
+          window.salesChart.destroy();
+        }
+        
+        const months = data.map(item => item.month);
+        const transactionCounts = data.map(item => item.transaction_count);
+        const revenues = data.map(item => item.revenue);
+        
+        window.salesChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: 'Jumlah Transaksi',
+                data: transactionCounts,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                yAxisID: 'y'
+              },
+              {
+                label: 'Pendapatan',
+                data: revenues,
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            scales: {
+              y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                grid: {
+                  drawOnChartArea: false,
+                },
+              }
+            }
+          }
+        });
+      }
+      
+      // Fungsi untuk mengambil data transaksi
+      function fetchTransactions() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        let url = '/api/admin/reports/sales';
+        const params = [];
+        
+        if (startDate) params.push(`startDate=${encodeURIComponent(startDate)}`);
+        if (endDate) params.push(`endDate=${encodeURIComponent(endDate)}`);
+        if (status) params.push(`status=${encodeURIComponent(status)}`);
+        
+        if (params.length > 0) {
+          url += '?' + params.join('&');
+        }
+        
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            displayTransactions(data);
+          })
+          .catch(error => {
+            console.error('Error fetching transactions:', error);
+            document.getElementById('transactionsList').innerHTML = '<p>Terjadi kesalahan saat mengambil data transaksi.</p>';
+          });
+      }
+      
+      // Fungsi untuk menampilkan data transaksi
+      function displayTransactions(transactions) {
+        const container = document.getElementById('transactionsList');
+        
+        if (transactions.length === 0) {
+          container.innerHTML = '<p>Tidak ada transaksi yang ditemukan.</p>';
+          return;
+        }
+        
+        let html = `
+          <table class="transactions-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Tanggal</th>
+                <th>Pelanggan</th>
+                <th>Kendaraan</th>
+                <th>Harga</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        transactions.forEach(transaction => {
+          html += `
+            <tr>
+              <td>${transaction.id}</td>
+              <td>${new Date(transaction.transaction_date).toLocaleDateString()}</td>
+              <td>${transaction.customer_name || '-'}</td>
+              <td>${transaction.brand} ${transaction.model}</td>
+              <td>Rp ${parseFloat(transaction.price).toLocaleString('id-ID')}</td>
+              <td>${transaction.status}</td>
+            </tr>
+          `;
+        });
+        
+        html += `
+            </tbody>
+          </table>
+        `;
+        
+        container.innerHTML = html;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Admin Dashboard - Sistem Penjualan Kendaraan</title>
+    {{> head}}
+    <style>
+      .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+      
+      .stat-card {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+      }
+      
+      .stat-card h3 {
+        margin: 0;
+        color: #495057;
+      }
+      
+      .stat-card .count {
+        font-size: 2em;
+        font-weight: bold;
+        color: #007bff;
+      }
+      
+      .transactions-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      
+      .transactions-table th, .transactions-table td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+      }
+      
+      .transactions-table th {
+        background-color: #f8f9fa;
+      }
+      
+      .status-pending { color: #ffc107; }
+      .status-confirmed { color: #28a745; }
+      .status-completed { color: #17a2b8; }
+      .status-cancelled { color: #dc3545; }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">Sistem Penjualan Kendaraan</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="/">Home</a></li>
+          <li><a href="/profile">Profile</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Admin Dashboard</h1>
+      
+      {{#if error}}
+        <div class="alert alert-danger">{{ error }}</div>
+      {{/if}}
+      
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <h3>Kendaraan</h3>
+          <div class="count">{{ vehicleCount }}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Transaksi</h3>
+          <div class="count">{{ transactionCount }}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Pelanggan</h3>
+          <div class="count">{{ customerCount }}</div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-8">
+          <h2>Transaksi Terbaru</h2>
+          {{#if recentTransactions}}
+            <table class="transactions-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Tanggal</th>
+                  <th>Pelanggan</th>
+                  <th>Kendaraan</th>
+                  <th>Harga</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each recentTransactions}}
+                  <tr>
+                    <td>{{ this.id }}</td>
+                    <td>{{ this.transaction_date }}</td>
+                    <td>{{ this.customer_name }}</td>
+                    <td>{{ this.brand }} {{ this.model }}</td>
+                    <td>Rp {{ formatRupiah this.price }}</td>
+                    <td class="status-{{ this.status }}">{{ this.status }}</td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          {{else}}
+            <p>Belum ada transaksi</p>
+          {{/if}}
+        </div>
+        
+        <div class="col-md-4">
+          <h2>Quick Actions</h2>
+          <ul class="list-group">
+            <li class="list-group-item"><a href="/admin/vehicles">Kelola Kendaraan</a></li>
+            <li class="list-group-item"><a href="/admin/transactions">Kelola Transaksi</a></li>
+            <li class="list-group-item"><a href="/admin/customers">Kelola Pelanggan</a></li>
+            <li class="list-group-item"><a href="/admin/reports/sales">Laporan Penjualan</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      // Fungsi untuk format angka menjadi format Rupiah
+      function formatRupiah(angka) {
+        var reverse = angka.toString().split('').reverse().join('');
+        var ribuan = reverse.match(/\d{1,3}/g);
+        var hasil = ribuan.join('.').split('').reverse().join('');
+        return hasil;
+      }
+      
+      // Tambahkan fungsi ke Handlebars helpers jika belum ada
+      // Di sisi server, kita akan tambahkan helper nanti
+    </script>
+  </body>
+</html>
