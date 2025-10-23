@@ -1,4 +1,4 @@
-# nodejs-mysql-starter-kit
+# santana-motor
 A starter kit for setting up a Node.js/Express project with a MySQL database.
 
 There aren't that many resources out there for using a SQL database with Node.js, so this is a starter kit with boilerplate for setting up a quick Node.js project with user sign up and authentication. You can interact with the database with raw SQL. If you want to add an object-relational mapping (ORM) package like Sequelize or Bookshelf, you can drop it in [models/db.js](../blob/master/models/db.js) and [models/user.js](../blob/master/models/user.js).

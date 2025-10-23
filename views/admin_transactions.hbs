@@ -113,7 +113,7 @@
               <td>${transaction.id}</td>
               <td>${transaction.customer_id}</td>
               <td>${customerName}</td>
-              <td>Rp ${parseFloat(transaction.total_amount).toLocaleString()}</td>
+              <td>Rp ${parseFloat(transaction.total_price).toLocaleString()}</td>
               <td><span class="${statusClass}">${transaction.status}</span></td>
               <td>${new Date(transaction.created_at).toLocaleDateString()}</td>
               <td>
